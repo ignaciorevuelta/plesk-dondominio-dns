@@ -33,7 +33,11 @@ final class DonDominioClientTest extends TestCase {
     }
 
     private function reading(array $data): C {
-        return new C('u','p', fn() => json_encode(['success'=>true,'responseData'=>$data]));
+        // Solo la página 1 trae datos; las siguientes vienen vacías (lista que no llega al total).
+        return new C('u','p', function($url,$post) use ($data) {
+            if ((int)$post['page'] > 1) { foreach (['dns','services'] as $k) { if (isset($data[$k])) $data[$k] = []; } }
+            return json_encode(['success'=>true,'responseData'=>$data]);
+        });
     }
     public function testListRecordsRejectsMissingDnsKey(): void {
         $this->expectException(E::class);
