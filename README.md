@@ -46,7 +46,7 @@ The logic in `plib/library` (record normalization, zone diff, API client, sync e
 Build the package:
 
 ```bash
-git archive -o dondominio-dns.zip HEAD meta.xml DESCRIPTION.md CHANGES.md _meta plib
+git archive -o dondominio-dns.zip HEAD meta.xml DESCRIPTION.md CHANGES.md _meta htdocs plib
 ```
 
 ## License
