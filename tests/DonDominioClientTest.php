@@ -31,4 +31,37 @@ final class DonDominioClientTest extends TestCase {
         $this->assertArrayNotHasKey('priority', $sent);
         $this->assertSame('a.ej.es', $sent['name']);
     }
+
+    private function reading(array $data): C {
+        return new C('u','p', fn() => json_encode(['success'=>true,'responseData'=>$data]));
+    }
+    public function testListRecordsRejectsMissingDnsKey(): void {
+        $this->expectException(E::class);
+        $this->reading(['queryInfo'=>['total'=>0]])->listRecords('ej.es');
+    }
+    public function testListRecordsRejectsNonArrayResponseData(): void {
+        $c = new C('u','p', fn() => '{"success":true,"responseData":"x"}');
+        $this->expectException(E::class);
+        $c->listRecords('ej.es');
+    }
+    public function testListRecordsRejectsShortList(): void {
+        $this->expectException(E::class);
+        $this->reading(['queryInfo'=>['total'=>5],'dns'=>[['entityID'=>'a']]])->listRecords('ej.es');
+    }
+    public function testListRecordsAcceptsEmptyZone(): void {
+        $this->assertSame([], $this->reading(['queryInfo'=>['total'=>0],'dns'=>[]])->listRecords('ej.es'));
+    }
+    public function testListServicesRejectsMissingServicesKey(): void {
+        $this->expectException(E::class);
+        $this->reading(['queryInfo'=>['total'=>0]])->listServices();
+    }
+    public function testListServicesRejectsShortList(): void {
+        $this->expectException(E::class);
+        $this->reading(['queryInfo'=>['total'=>3],'services'=>[['name'=>'a.es']]])->listServices();
+    }
+    public function testWritesAcceptNonArrayResponseData(): void {
+        $c = new C('u','p', fn() => '{"success":true,"responseData":"ok"}');
+        $c->delete('ej.es','1');
+        $this->assertTrue(true);
+    }
 }
