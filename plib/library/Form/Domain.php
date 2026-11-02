@@ -2,7 +2,7 @@
 // Acciones sobre un dominio. Va por formulario para llevar la protección CSRF de Plesk.
 class Modules_DondominioDns_Form_Domain extends pm_Form_Simple
 {
-    public const ACTIONS = ['preview', 'import', 'enable', 'disable', 'force'];
+    public const ACTIONS = ['preview', 'import', 'import_all', 'enable', 'disable', 'force'];
 
     public function __construct(private array $domains, $options = null)
     {

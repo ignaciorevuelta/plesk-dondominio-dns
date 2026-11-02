@@ -119,6 +119,11 @@ class IndexController extends pm_Controller_Action
                 Modules_DondominioDns_Runner::importer()->importOne($domain);
                 $this->_status->addInfo($this->lmsg('imported', ['domain' => $domain]));
                 return null;
+            case 'import_all':
+                $report = Modules_DondominioDns_Runner::importer()->importAll();
+                Modules_DondominioDns_Config::setReport($report);
+                $this->_status->addInfo($this->lmsg('importAllDone', ['imported' => count($report['imported']), 'errors' => count($report['errors'])]));
+                return null;
             case 'enable':
                 Modules_DondominioDns_Runner::syncDomain($domain);
                 Modules_DondominioDns_Config::setEnabled(array_merge(Modules_DondominioDns_Config::enabled(), [$domain]));
