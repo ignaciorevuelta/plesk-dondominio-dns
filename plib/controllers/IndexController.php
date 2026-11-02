@@ -50,7 +50,6 @@ class IndexController extends pm_Controller_Action
             $this->_helper->json(['redirect' => $redirect]);
         }
         $this->view->form = $form;
-        $this->view->importAllForm = $this->importAllForm();
         $this->view->list = $this->domainList($domains);
         $this->view->report = Modules_DondominioDns_Config::report();
         $this->view->configured = $this->configured();
@@ -58,9 +57,12 @@ class IndexController extends pm_Controller_Action
 
     public function importAllAction()
     {
-        $form = $this->importAllForm();
+        $form = new pm_Form_Simple();
+        $form->addControlButtons(['cancelLink' => pm_Context::getActionUrl('index', 'domains'), 'sendTitle' => $this->lmsg('importAllButton')]);
         if (!$this->getRequest()->isPost() || !$form->isValid($this->getRequest()->getPost())) {
-            throw new pm_Exception('Permission denied');
+            $this->view->form = $form;
+            $this->view->pageTitle = $this->lmsg('importAllButton');
+            return;
         }
         try {
             $report = Modules_DondominioDns_Runner::importer()->importAll();
@@ -70,13 +72,6 @@ class IndexController extends pm_Controller_Action
             $this->_status->addError($e->getMessage());
         }
         $this->_helper->json(['redirect' => pm_Context::getActionUrl('index', 'domains')]);
-    }
-
-    private function importAllForm(): pm_Form_Simple
-    {
-        $form = new pm_Form_Simple(['action' => pm_Context::getActionUrl('index', 'import-all')]);
-        $form->addControlButtons(['cancelHidden' => true, 'sendTitle' => $this->lmsg('importAllButton')]);
-        return $form;
     }
 
     public function previewAction()
@@ -182,6 +177,11 @@ class IndexController extends pm_Controller_Action
             'status' => ['title' => $this->lmsg('statusColumn')],
             'error' => ['title' => $this->lmsg('errorColumn')],
         ]);
+        $list->setTools([[
+            'title' => $this->lmsg('importAllButton'),
+            'description' => $this->lmsg('importAllHint'),
+            'link' => pm_Context::getActionUrl('index', 'import-all'),
+        ]]);
         $list->setDataUrl(['action' => 'domains-data']);
         return $list;
     }
