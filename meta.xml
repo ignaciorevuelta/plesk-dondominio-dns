@@ -1,11 +1,17 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf-8"?>
 <module>
   <id>dondominio-dns</id>
   <name>Don Dominio DNS</name>
-  <description>Replicates Plesk DNS zones to Don Dominio.</description>
+  <description>Replicates the DNS zones you edit in Plesk to Don Dominio, with an initial import of the existing Don Dominio zones.</description>
+  <description xml:lang="es-ES">Replica en Don Dominio las zonas DNS que editas en Plesk, con una importación inicial de las zonas que ya existen en Don Dominio.</description>
+  <category>dns</category>
   <version>0.1.0</version>
   <release>1</release>
   <vendor>Ignacio Revuelta</vendor>
   <url>https://github.com/ignaciorevuelta/plesk-dondominio-dns</url>
-  <plesk_min_version>18.0.0</plesk_min_version>
+  <help_url>https://github.com/ignaciorevuelta/plesk-dondominio-dns#readme</help_url>
+  <support_url>https://github.com/ignaciorevuelta/plesk-dondominio-dns/issues</support_url>
+  <privacy_policy_url>https://github.com/ignaciorevuelta/plesk-dondominio-dns/blob/main/PRIVACY.md</privacy_policy_url>
+  <plesk_min_version>18.0.40</plesk_min_version>
+  <os>unix</os>
 </module>
