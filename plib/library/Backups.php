@@ -9,8 +9,11 @@ class Modules_DondominioDns_Backups
         if (!is_dir($path) && !mkdir($path, 0700, true) && !is_dir($path)) {
             throw new RuntimeException("No se puede crear $path");
         }
-        $file = sprintf('%s/%s-%s-%s.json', $path, date('Ymd-His'), substr(uniqid(), -6), $side);
-        if (file_put_contents($file, json_encode($records, JSON_PRETTY_PRINT)) === false) {
+        $json = json_encode($records, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        $file = sprintf('%s/%s-%020d-%s.json', $path, gmdate('Ymd-His'), hrtime(true), $side);
+        $written = file_put_contents($file, $json);
+        if ($written !== strlen($json)) {
+            @unlink($file);
             throw new RuntimeException("No se puede escribir $file");
         }
         $all = glob("$path/*.json");
