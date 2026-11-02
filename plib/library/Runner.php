@@ -21,8 +21,13 @@ class Modules_DondominioDns_Runner
 
     public static function syncDomain(string $domain, bool $force = false): void
     {
-        $desired = array_map(function ($r) { $r['id'] = null; return $r; }, (new Modules_DondominioDns_PleskDns())->records($domain));
-        self::engine()->sync($domain, $desired, $force);
+        self::engine()->sync($domain, self::desired($domain), $force);
+    }
+
+    // Zona de Plesk como zona deseada (sin ids de Plesk, que no significan nada en Don Dominio).
+    public static function desired(string $domain): array
+    {
+        return array_map(function ($r) { $r['id'] = null; return $r; }, (new Modules_DondominioDns_PleskDns())->records($domain));
     }
 
     // Tareas que Plesk envía al backend. Plesk manda la zona completa en cada cambio.

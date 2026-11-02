@@ -103,11 +103,7 @@ class IndexController extends pm_Controller_Action
 
     private function previewList(string $domain): pm_View_List_Simple
     {
-        $client = Modules_DondominioDns_Runner::client();
-        $remote = array_values(array_filter(array_map(['Modules_DondominioDns_Record', 'fromDonDominio'], $client->listRecords($domain))));
-        $local = array_values(array_filter((new Modules_DondominioDns_PleskDns())->records($domain), fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
-        // Lo que haría la sincronización: Plesk es lo deseado y Don Dominio lo actual.
-        $plan = Modules_DondominioDns_ZoneDiff::plan($local, $remote);
+        $plan = Modules_DondominioDns_Runner::engine()->plan($domain, Modules_DondominioDns_Runner::desired($domain));
         $rows = [];
         foreach (['create' => $plan['create'], 'delete' => $plan['delete']] as $op => $recs) {
             foreach ($recs as $r) {

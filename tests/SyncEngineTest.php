@@ -60,6 +60,15 @@ final class SyncEngineTest extends TestCase {
         $this->assertCount(1,$files);
         $this->assertSame([['n'=>1]], json_decode(file_get_contents($files[0]), true));
     }
+    public function testPlanMatchesSyncAndWritesNothing(): void {
+        $c = new FakeClient([$this->dd('1','a','1'),$this->dd('2','b','2'),$this->dd('3','c','3'),$this->dd('4','d','4')]);
+        $desired = [$this->rec('a','1'),$this->rec('b','2'),$this->rec('c','3'),$this->rec('z','9'),
+            ['name'=>'ej.es','type'=>'NS','priority'=>'-','value'=>'ns1.ej.es.','id'=>null],$this->rec('ns1.ej.es','192.0.2.1')];
+        $plan = (new S($c,new B($this->dir)))->plan('ej.es',$desired);
+        $this->assertSame([],$c->log);
+        $this->assertSame($plan, (new S($c,new B($this->dir)))->sync('ej.es',$desired));
+        $this->assertSame(['z'], array_column($plan['create'],'name'));
+    }
     public function testNsGlueAddressIsNotPushed(): void {
         $c = new FakeClient([$this->dd('1','a','1')]);
         (new S($c,new B($this->dir)))->sync('ej.es',[
