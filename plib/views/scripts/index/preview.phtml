@@ -1,0 +1,3 @@
+<p><?php echo $this->escape(pm_Locale::lmsg('previewIntro')); ?></p>
+<?php echo $this->renderList($this->list); ?>
+<p><a href="<?php echo $this->escape(pm_Context::getActionUrl('index', 'domains')); ?>"><?php echo $this->escape(pm_Locale::lmsg('backLink')); ?></a></p>

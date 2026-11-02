@@ -1,0 +1,19 @@
+<?php echo $this->renderTabs($this->tabs); ?>
+<?php if (!$this->configured): ?>
+<p><?php echo $this->escape(pm_Locale::lmsg('notConfigured')); ?></p>
+<?php else: ?>
+<?php if ($this->report): ?>
+<h3><?php echo $this->escape(pm_Locale::lmsg('reportTitle')); ?></h3>
+<ul>
+<?php foreach (['imported', 'servicesWithoutDomain', 'domainsWithoutService'] as $key): ?>
+  <li><?php echo $this->escape(pm_Locale::lmsg('report_' . $key)); ?>: <?php echo $this->escape(implode(', ', $this->report[$key] ?? []) ?: '—'); ?></li>
+<?php endforeach; ?>
+<?php foreach ($this->report['errors'] ?? [] as $domain => $error): ?>
+  <li><?php echo $this->escape(pm_Locale::lmsg('report_error', ['domain' => $domain])); ?>: <?php echo $this->escape($error); ?></li>
+<?php endforeach; ?>
+</ul>
+<?php endif; ?>
+<p><?php echo $this->escape(pm_Locale::lmsg('domainsIntro')); ?></p>
+<?php echo $this->form; ?>
+<?php echo $this->renderList($this->list); ?>
+<?php endif; ?>
