@@ -14,7 +14,7 @@ class Modules_DondominioDns_SyncEngine
             return $plan;
         }
         if (!$force && (count($plan['delete']) + count($plan['update'])) * 100 > count($current) * $this->maxDeletePercent) {
-            throw new Modules_DondominioDns_BlockedException(sprintf('%s: se borrarían %d de %d registros', $domain, count($plan['delete']), count($current)));
+            throw new Modules_DondominioDns_BlockedException(sprintf('%s: se borrarían o sustituirían %d de %d registros', $domain, count($plan['delete']) + count($plan['update']), count($current)));
         }
         $this->backups->save($domain, 'dondominio', $raw);
         $applied = [];
@@ -32,7 +32,7 @@ class Modules_DondominioDns_SyncEngine
                 $applied[] = 'delete:' . $rec['id'];
             }
         } catch (Throwable $e) {
-            throw new Modules_DondominioDns_PartialSyncException(sprintf('%s: fallo a mitad de la sincronizaci�n (%d operaciones aplicadas): %s', $domain, count($applied), $e->getMessage()), $applied, $e);
+            throw new Modules_DondominioDns_PartialSyncException(sprintf('%s: fallo a mitad de la sincronización (%d operaciones aplicadas): %s', $domain, count($applied), $e->getMessage()), $applied, $e);
         }
         return $plan;
     }

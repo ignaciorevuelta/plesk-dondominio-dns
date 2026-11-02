@@ -77,7 +77,7 @@ final class SyncEngineTest extends TestCase {
         $c->failOn = 'delete:4';
         try {
             (new S($c,new B($this->dir)))->sync('ej.es',[$this->rec('a','1'),$this->rec('b','2'),$this->rec('c','3'),$this->rec('z','9')]);
-            $this->fail('debía lanzar');
+            $this->fail('debÃ­a lanzar');
         } catch (Modules_DondominioDns_PartialSyncException $e) {
             $this->assertSame(['create:z'],$e->getApplied());
             $this->assertInstanceOf(Modules_DondominioDns_ApiException::class,$e->getPrevious());
