@@ -29,4 +29,18 @@ final class RecordTest extends TestCase {
         $this->assertNull(R::fromDonDominio(['entityID'=>'Z','name'=>'ej.es','type'=>'SOA','ttl'=>'-','priority'=>'-','value'=>'x']));
         $this->assertNull(R::fromPlesk((object)['host'=>'ej.es.','type'=>'PTR','opt'=>'','value'=>'x.']));
     }
+    public function testSrvKeyEqualAcrossSides(): void {
+        $p = R::fromPlesk((object)['host'=>'_sip._tcp.ej.es.','type'=>'SRV','opt'=>'0 5 5060','value'=>'sip.ej.es.']);
+        $d = R::fromDonDominio(['entityID'=>'S','name'=>'_sip._tcp.ej.es','type'=>'SRV','ttl'=>'-','priority'=>'0','value'=>'5 5060 Sip.ej.es.']);
+        $this->assertSame(R::key($p), R::key($d));
+    }
+    public function testCaaKeyEqualAcrossSides(): void {
+        $p = R::fromPlesk((object)['host'=>'ej.es.','type'=>'CAA','opt'=>'0 issue','value'=>'"letsencrypt.org"']);
+        $d = R::fromDonDominio(['entityID'=>'C','name'=>'ej.es','type'=>'CAA','ttl'=>'-','priority'=>'-','value'=>'0 issue "letsencrypt.org"']);
+        $this->assertSame(R::key($p), R::key($d));
+    }
+    public function testSrvWithBadOptIsNull(): void {
+        $this->assertNull(R::fromPlesk((object)['host'=>'s.ej.es.','type'=>'SRV','opt'=>'','value'=>'x.']));
+        $this->assertNull(R::fromPlesk((object)['host'=>'s.ej.es.','type'=>'SRV','opt'=>'0 5','value'=>'x.']));
+    }
 }

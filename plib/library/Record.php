@@ -21,8 +21,12 @@ class Modules_DondominioDns_Record
         if ($type === 'MX') {
             $priority = $opt === '' ? '-' : $opt;
         } elseif ($type === 'SRV') {
-            [$priority, $weight, $port] = array_pad(preg_split('/\s+/', $opt), 3, '0');
-            $value = "$weight $port " . self::host($value);
+            $parts = $opt === '' ? [] : preg_split('/\s+/', $opt);
+            if (count($parts) !== 3) {
+                return null;
+            }
+            [$priority, $weight, $port] = $parts;
+            $value = "$weight $port $value";
         } elseif ($type === 'CAA' && $opt !== '') {
             $value = "$opt $value";
         }
@@ -47,6 +51,11 @@ class Modules_DondominioDns_Record
     {
         if (in_array($type, self::HOST_VALUE, true)) {
             $value = self::host($value);
+        }
+        if ($type === 'SRV') {
+            $tokens = preg_split('/\s+/', trim($value));
+            $tokens[count($tokens) - 1] = self::host($tokens[count($tokens) - 1]);
+            $value = implode(' ', $tokens);
         }
         return ['name' => self::host($name), 'type' => $type, 'priority' => $priority === '' ? '-' : $priority, 'value' => trim($value), 'id' => $id];
     }
