@@ -79,6 +79,19 @@ class Modules_DondominioDns_Record
         return array_values(array_filter($records, fn($r) => !(in_array(strtoupper($r['type']), ['A', 'AAAA'], true) && isset($targets[self::host($r['name'])]))));
     }
 
+    public static function zoneApexes(array $names): array
+    {
+        $set = array_flip($names);
+        return array_values(array_filter($names, function ($n) use ($set) {
+            for ($p = strpos($n, '.'); $p !== false; $p = strpos($n, '.', $p + 1)) {
+                if (isset($set[substr($n, $p + 1)])) {
+                    return false;
+                }
+            }
+            return true;
+        }));
+    }
+
     public static function key(array $rec): string
     {
         return implode('|', [$rec['name'], $rec['type'], $rec['priority'], $rec['value']]);

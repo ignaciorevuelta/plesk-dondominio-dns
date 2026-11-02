@@ -5,10 +5,11 @@ class Modules_DondominioDns_PleskDns
 {
     private array $siteIds = [];
 
+    // Solo dominios con zona propia: los subdominios de otro dominio de Plesk viven en la zona del padre.
     public function domains(): array
     {
         $this->loadSites();
-        return array_keys($this->siteIds);
+        return Modules_DondominioDns_Record::zoneApexes(array_keys($this->siteIds));
     }
 
     public function records(string $domain): array

@@ -41,6 +41,10 @@ final class RecordTest extends TestCase {
         $rec = R::fromDonDominio(['entityID'=>'1','name'=>'ej.es','type'=>'MX','ttl'=>'-','priority'=>'0','value'=>'ej-es.mail.protection.outlook.com']);
         $this->assertSame(['host'=>'','type'=>'MX','opt'=>'0','value'=>'ej-es.mail.protection.outlook.com.'], R::toPlesk($rec, 'ej.es'));
     }
+    public function testZoneApexesDropsSubdomainsOfListedDomains(): void {
+        $this->assertSame(['aossa.es','uttes.es','solo.sub.ej.es'],
+            R::zoneApexes(['aossa.es','sentya.aossa.es','uttes.es','a.b.uttes.es','solo.sub.ej.es']));
+    }
     public function testTxtKeepsCase(): void {
         $p = R::fromPlesk((object)['host'=>'ej.es.','type'=>'TXT','opt'=>'','value'=>'v=spf1 Include:X -all']);
         $this->assertSame('v=spf1 Include:X -all', $p['value']);
