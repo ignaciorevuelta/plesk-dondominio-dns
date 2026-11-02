@@ -20,6 +20,27 @@ final class RecordTest extends TestCase {
         $this->assertSame('0', $p['priority']);
         $this->assertSame('5 5060 sip.ej.es', $p['value']);
     }
+    public function testToPleskRoundTrips(): void {
+        $cases = [
+            ['host'=>'ej.es.','type'=>'MX','opt'=>'10','value'=>'mail.ej.es.'],
+            ['host'=>'_imaps._tcp.ej.es.','type'=>'SRV','opt'=>'0 0 993','value'=>'ej.es.'],
+            ['host'=>'www.ej.es.','type'=>'CNAME','opt'=>'','value'=>'ej.es.'],
+            ['host'=>'ej.es.','type'=>'TXT','opt'=>'','value'=>'v=spf1 -all'],
+            ['host'=>'ej.es.','type'=>'CAA','opt'=>'0 issue','value'=>'letsencrypt.org'],
+        ];
+        foreach ($cases as $c) {
+            $rec = R::fromPlesk((object)$c);
+            $back = R::toPlesk($rec, 'ej.es');
+            $relative = $c['host'] === 'ej.es.' ? '' : substr($c['host'], 0, -strlen('.ej.es.'));
+            $this->assertSame($relative, $back['host'], $c['type']);
+            $this->assertSame($c['opt'], $back['opt'], $c['type']);
+            $this->assertSame(R::key($rec), R::key(R::fromPlesk((object)['host'=>$c['host'],'type'=>$back['type'],'opt'=>$back['opt'],'value'=>$back['value']])), $c['type']);
+        }
+    }
+    public function testToPleskFromDonDominioMx(): void {
+        $rec = R::fromDonDominio(['entityID'=>'1','name'=>'ej.es','type'=>'MX','ttl'=>'-','priority'=>'0','value'=>'ej-es.mail.protection.outlook.com']);
+        $this->assertSame(['host'=>'','type'=>'MX','opt'=>'0','value'=>'ej-es.mail.protection.outlook.com.'], R::toPlesk($rec, 'ej.es'));
+    }
     public function testTxtKeepsCase(): void {
         $p = R::fromPlesk((object)['host'=>'ej.es.','type'=>'TXT','opt'=>'','value'=>'v=spf1 Include:X -all']);
         $this->assertSame('v=spf1 Include:X -all', $p['value']);

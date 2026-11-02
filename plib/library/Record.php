@@ -42,6 +42,30 @@ class Modules_DondominioDns_Record
         return self::make((string)$r['name'], $type, (string)$r['priority'], (string)$r['value'], (string)$r['entityID']);
     }
 
+    // Inversa de fromPlesk: campos de <add_rec>, con host relativo al dominio ('' para el apex).
+    public static function toPlesk(array $rec, string $domain): array
+    {
+        $domain = self::host($domain);
+        $host = $rec['name'] === $domain ? '' : substr($rec['name'], 0, -strlen(".$domain"));
+        $value = $rec['value'];
+        $opt = '';
+        if ($rec['type'] === 'MX') {
+            $opt = $rec['priority'] === '-' ? '' : $rec['priority'];
+        } elseif ($rec['type'] === 'SRV') {
+            [$weight, $port, $target] = preg_split('/\s+/', $value, 3);
+            $opt = ($rec['priority'] === '-' ? '0' : $rec['priority']) . " $weight $port";
+            $value = $target;
+        } elseif ($rec['type'] === 'CAA') {
+            [$flag, $tag, $rest] = array_pad(preg_split('/\s+/', $value, 3), 3, '');
+            $opt = "$flag $tag";
+            $value = $rest;
+        }
+        if (in_array($rec['type'], ['CNAME', 'MX', 'SRV'], true)) {
+            $value .= '.';
+        }
+        return ['host' => $host, 'type' => $rec['type'], 'opt' => $opt, 'value' => $value];
+    }
+
     public static function key(array $rec): string
     {
         return implode('|', [$rec['name'], $rec['type'], $rec['priority'], $rec['value']]);

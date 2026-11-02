@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<module>
+  <id>dondominio-dns</id>
+  <name>Don Dominio DNS</name>
+  <description>Replicates Plesk DNS zones to Don Dominio.</description>
+  <version>0.1.0</version>
+  <release>1</release>
+  <vendor>Ignacio Revuelta</vendor>
+  <url>https://github.com/ignaciorevuelta/plesk-dondominio-dns</url>
+  <plesk_min_version>18.0.0</plesk_min_version>
+</module>
