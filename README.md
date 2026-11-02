@@ -51,4 +51,4 @@ git archive -o dondominio-dns.zip HEAD meta.xml DESCRIPTION.md CHANGES.md _meta 
 
 ## License
 
-MIT. Not affiliated with Don Dominio or Plesk.
+MIT. The administrator accepts the [license agreement](plib/resources/EULA.md) in the extension before it does anything. Not affiliated with Don Dominio or Plesk.

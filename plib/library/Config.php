@@ -11,6 +11,8 @@ class Modules_DondominioDns_Config
     }
     public static function threshold(): int { return (int)pm_Settings::get('threshold', 30); }
     public static function setThreshold(int $v): void { pm_Settings::set('threshold', (string)max(0, min(100, $v))); }
+    public static function eulaAccepted(): bool { return pm_Settings::get('eulaAccepted', '') !== ''; }
+    public static function setEulaAccepted(string $by): void { pm_Settings::set('eulaAccepted', json_encode(['by' => $by, 'at' => gmdate('c')])); }
     public static function importDone(): bool { return pm_Settings::get('importDone', '') === '1'; }
     public static function setImportDone(): void { pm_Settings::set('importDone', '1'); }
     public static function enabled(): array { return self::json('enabled'); }

@@ -33,6 +33,9 @@ class Modules_DondominioDns_Runner
     // Tareas que Plesk envía al backend. Plesk manda la zona completa en cada cambio.
     public static function handleTasks(array $tasks): void
     {
+        if (!Modules_DondominioDns_Config::eulaAccepted()) {
+            return;
+        }
         self::locked(function () use ($tasks) {
             $enabled = Modules_DondominioDns_Config::enabled();
             foreach ($tasks as $task) {
@@ -66,6 +69,9 @@ class Modules_DondominioDns_Runner
 
     public static function retry(): void
     {
+        if (!Modules_DondominioDns_Config::eulaAccepted()) {
+            return;
+        }
         self::locked(function () {
             foreach (Modules_DondominioDns_Config::failures() as $domain => $f) {
                 if (!empty($f['blocked']) || $f['attempts'] >= self::MAX_ATTEMPTS || $f['next'] > time()) {

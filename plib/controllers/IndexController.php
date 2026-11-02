@@ -8,10 +8,33 @@ class IndexController extends pm_Controller_Action
             throw new pm_Exception('Permission denied');
         }
         $this->view->pageTitle = $this->lmsg('pageTitle');
+        // Hasta aceptar el EULA no se muestra nada más ni se escribe en ningún sitio.
+        if (!Modules_DondominioDns_Config::eulaAccepted() && $this->getRequest()->getActionName() !== 'eula') {
+            $this->_redirect('index/eula');
+        }
         $this->view->tabs = [
             ['title' => $this->lmsg('settingsTab'), 'action' => 'index'],
             ['title' => $this->lmsg('domainsTab'), 'action' => 'domains'],
         ];
+    }
+
+    public function eulaAction()
+    {
+        $form = new pm_Form_Simple();
+        $form->addElement('checkbox', 'accept', [
+            'label' => $this->lmsg('eulaAccept'),
+            'required' => true,
+            'uncheckedValue' => null,
+        ]);
+        $form->addControlButtons(['cancelLink' => pm_Context::getModulesListUrl()]);
+        if ($this->getRequest()->isPost() && $form->isValid($this->getRequest()->getPost())) {
+            Modules_DondominioDns_Config::setEulaAccepted((string)pm_Session::getClient()->getProperty('login'));
+            $this->_helper->json(['redirect' => pm_Context::getActionUrl('index', 'index')]);
+        }
+        $this->view->eula = file_get_contents(pm_Context::getPlibDir() . 'resources/EULA.md');
+        $this->view->form = $form;
+        $this->view->pageTitle = $this->lmsg('eulaTitle');
+        $this->view->tabs = [];
     }
 
     public function indexAction()

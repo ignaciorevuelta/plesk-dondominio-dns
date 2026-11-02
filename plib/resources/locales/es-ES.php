@@ -1,6 +1,9 @@
 <?php
 $messages = [
     'pageTitle' => 'Don Dominio DNS',
+    'eulaTitle' => 'Acuerdo de licencia',
+    'eulaIntro' => 'Lee y acepta el acuerdo de licencia antes de usar la extensión. No se envía nada a Don Dominio hasta que lo aceptes y configures la extensión.',
+    'eulaAccept' => 'He leído y acepto el acuerdo de licencia',
     'settingsTab' => 'Ajustes',
     'domainsTab' => 'Dominios',
     'settingsIntro' => 'Las credenciales de la API las facilita el soporte de Don Dominio. La IP de este servidor debe estar autorizada para la API en tu cuenta de Don Dominio.',
