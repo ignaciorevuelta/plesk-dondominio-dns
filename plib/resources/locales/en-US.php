@@ -49,7 +49,6 @@ $messages = [
     'imported' => '%%domain%%: the Plesk zone now matches Don Dominio.',
     'enabled' => '%%domain%%: synchronization enabled.',
     'disabled' => '%%domain%%: synchronization disabled. Nothing was changed in Don Dominio.',
-    'forced' => '%%domain%%: held change applied.',
-    'notEnabled' => '%%domain%% is not enabled.',
+    'forced' => '%%domain%%: held change applied; synchronization is enabled.',
     'blocked' => 'Held by the safety threshold: %%error%%. Review the preview, then use "Apply a change held by the safety threshold" if it is correct.',
 ];

@@ -49,7 +49,6 @@ $messages = [
     'imported' => '%%domain%%: la zona de Plesk coincide ahora con la de Don Dominio.',
     'enabled' => '%%domain%%: sincronización activada.',
     'disabled' => '%%domain%%: sincronización desactivada. No se ha cambiado nada en Don Dominio.',
-    'forced' => '%%domain%%: cambio retenido aplicado.',
-    'notEnabled' => '%%domain%% no está activado.',
+    'forced' => '%%domain%%: cambio retenido aplicado; la sincronización queda activada.',
     'blocked' => 'Retenido por el umbral de seguridad: %%error%%. Revisa la vista previa y, si es correcto, usa «Aplicar un cambio retenido por el umbral de seguridad».',
 ];
