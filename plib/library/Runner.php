@@ -41,8 +41,13 @@ class Modules_DondominioDns_Runner
                 $desired = [];
                 foreach ((array)($task->zone->rr ?? []) as $rr) {
                     $rec = Modules_DondominioDns_Record::fromPlesk($rr);
+                    if (strtoupper((string)$rr->type) === 'NS') {
+                        // SyncEngine lo descarta, pero lo necesita para reconocer los A de los NS.
+                        $desired[] = ['name' => (string)$rr->host, 'type' => 'NS', 'priority' => '-', 'value' => (string)$rr->value, 'id' => null];
+                        continue;
+                    }
                     if ($rec === null) {
-                        if (!in_array(strtoupper((string)$rr->type), ['NS', 'SOA'], true)) {
+                        if (strtoupper((string)$rr->type) !== 'SOA') {
                             fwrite(STDERR, "$domain: registro {$rr->type} omitido, Don Dominio no lo admite\n");
                         }
                         continue;

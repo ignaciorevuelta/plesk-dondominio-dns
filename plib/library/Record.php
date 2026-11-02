@@ -66,6 +66,19 @@ class Modules_DondominioDns_Record
         return ['host' => $host, 'type' => $rec['type'], 'opt' => $opt, 'value' => $value];
     }
 
+    // Quita los A/AAAA que dan dirección a los NS de la propia zona (ns1.dominio...). Plesk los exige
+    // mientras tenga esos NS, y en Don Dominio sobran porque allí mandan sus propios NS.
+    public static function withoutNsGlue(array $records): array
+    {
+        $targets = [];
+        foreach ($records as $r) {
+            if (strtoupper($r['type']) === 'NS') {
+                $targets[self::host($r['value'])] = true;
+            }
+        }
+        return array_values(array_filter($records, fn($r) => !(in_array(strtoupper($r['type']), ['A', 'AAAA'], true) && isset($targets[self::host($r['name'])]))));
+    }
+
     public static function key(array $rec): string
     {
         return implode('|', [$rec['name'], $rec['type'], $rec['priority'], $rec['value']]);

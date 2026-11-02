@@ -60,6 +60,15 @@ final class SyncEngineTest extends TestCase {
         $this->assertCount(1,$files);
         $this->assertSame([['n'=>1]], json_decode(file_get_contents($files[0]), true));
     }
+    public function testNsGlueAddressIsNotPushed(): void {
+        $c = new FakeClient([$this->dd('1','a','1')]);
+        (new S($c,new B($this->dir)))->sync('ej.es',[
+            $this->rec('a','1'),
+            ['name'=>'ej.es','type'=>'NS','priority'=>'-','value'=>'ns1.ej.es.','id'=>null],
+            $this->rec('ns1.ej.es','192.0.2.1'),
+        ]);
+        $this->assertSame([],$c->log);
+    }
     public function testUnsupportedTypeInDesiredIsIgnored(): void {
         $c = new FakeClient([$this->dd('1','a','1')]);
         $ns = ['name'=>'ej.es','type'=>'NS','priority'=>'-','value'=>'ns1.plesk','id'=>null];

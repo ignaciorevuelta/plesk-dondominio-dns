@@ -33,6 +33,16 @@ final class ZoneImporterTest extends TestCase {
         $this->assertSame(['add:auto.a.es','del:p1'],$p->log);
         $this->assertSame(0,$d->writes);
     }
+    public function testNsGlueAddressInPleskIsKept(): void {
+        $p = new FakePlesk(['a.es'=>[
+            ['name'=>'a.es','type'=>'NS','priority'=>'-','value'=>'ns2.a.es.','id'=>'n1'],
+            ['name'=>'ns2.a.es','type'=>'A','priority'=>'-','value'=>'192.0.2.1','id'=>'g1'],
+            ['name'=>'old.a.es','type'=>'A','priority'=>'-','value'=>'192.0.2.9','id'=>'o1'],
+        ]]);
+        $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','a.es')]]);
+        (new I($d,$p,new B(sys_get_temp_dir().'/ddi'.uniqid())))->importOne('a.es');
+        $this->assertSame(['add:w.a.es','del:o1'],$p->log);
+    }
     public function testErrorInOneDomainDoesNotStopOthers(): void {
         $p = new FakePlesk(['mal.es'=>[],'bien.es'=>[]]);
         $d = new FakeDd(['mal.es'=>null,'bien.es'=>[$this->dd('w.bien.es','x')]]);

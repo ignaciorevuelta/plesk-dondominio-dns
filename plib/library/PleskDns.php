@@ -59,10 +59,15 @@ class Modules_DondominioDns_PleskDns
         if ($this->siteIds) {
             return;
         }
-        $r = $this->call('<site><get><filter/><dataset><gen_info/></dataset></get></site>');
-        foreach ($r->site->get->result as $res) {
-            if ((string)$res->status === 'ok') {
-                $this->siteIds[strtolower((string)$res->data->gen_info->{'ascii-name'} ?: (string)$res->data->gen_info->name)] = (int)$res->id;
+        // Los dominios principales de cada suscripción son webspaces; los demás, sites.
+        foreach (['webspace', 'site'] as $type) {
+            $r = $this->call("<$type><get><filter/><dataset><gen_info/></dataset></get></$type>");
+            foreach ($r->$type->get->result as $res) {
+                $name = strtolower((string)$res->data->gen_info->{'ascii-name'} ?: (string)$res->data->gen_info->name);
+                // Los sitios comodín (*.dominio) no tienen zona propia.
+                if ((string)$res->status === 'ok' && strpos((string)$res->data->gen_info->name, '*') === false) {
+                    $this->siteIds[$name] = (int)$res->id;
+                }
             }
         }
     }

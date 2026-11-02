@@ -7,7 +7,7 @@ class Modules_DondominioDns_SyncEngine
     {
         $raw = $this->client->listRecords($domain);
         $current = array_values(array_filter(array_map(['Modules_DondominioDns_Record', 'fromDonDominio'], $raw)));
-        $desired = array_values(array_filter($desired, fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
+        $desired = array_values(array_filter(Modules_DondominioDns_Record::withoutNsGlue($desired), fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
         $plan = Modules_DondominioDns_ZoneDiff::plan($desired, $current);
         $empty = !$plan['create'] && !$plan['update'] && !$plan['delete'];
         if ($empty) {

@@ -30,7 +30,7 @@ class Modules_DondominioDns_ZoneImporter
             throw new Modules_DondominioDns_ApiException("$domain: la zona de Don Dominio no tiene registros sincronizables; no se toca Plesk");
         }
         $all = $this->plesk->records($domain);
-        $current = array_values(array_filter($all, fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
+        $current = array_values(array_filter(Modules_DondominioDns_Record::withoutNsGlue($all), fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
         $plan = Modules_DondominioDns_ZoneDiff::plan($desired, $current);
         if (!$plan['create'] && !$plan['update'] && !$plan['delete']) {
             return;
