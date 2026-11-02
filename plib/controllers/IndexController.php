@@ -41,7 +41,7 @@ class IndexController extends pm_Controller_Action
             $operation = $form->getValue('operation');
             $redirect = pm_Context::getActionUrl('index', 'domains');
             try {
-                $redirect = $this->run($operation, $domain) ?? $redirect;
+                $redirect = $this->runOperation($operation, $domain) ?? $redirect;
             } catch (Modules_DondominioDns_BlockedException $e) {
                 $this->_status->addError($this->lmsg('blocked', ['error' => $e->getMessage()]));
             } catch (Exception $e) {
@@ -110,7 +110,7 @@ class IndexController extends pm_Controller_Action
         return $list;
     }
 
-    private function run(string $operation, string $domain): ?string
+    private function runOperation(string $operation, string $domain): ?string
     {
         switch ($operation) {
             case 'preview':
