@@ -16,7 +16,7 @@ class Modules_DondominioDns_ZoneImporter
             try {
                 $this->importOne($domain);
                 $report['imported'][] = $domain;
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $report['errors'][$domain] = $e->getMessage();
             }
         }
@@ -26,15 +26,22 @@ class Modules_DondominioDns_ZoneImporter
     public function importOne(string $domain): void
     {
         $desired = array_values(array_filter(array_map(['Modules_DondominioDns_Record', 'fromDonDominio'], $this->client->listRecords($domain))));
-        $current = $this->plesk->records($domain);
-        $this->backups->save($domain, 'plesk', $current);
+        if (!$desired) {
+            throw new Modules_DondominioDns_ApiException("$domain: la zona de Don Dominio no tiene registros sincronizables; no se toca Plesk");
+        }
+        $all = $this->plesk->records($domain);
+        $current = array_values(array_filter($all, fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
         $plan = Modules_DondominioDns_ZoneDiff::plan($desired, $current);
+        if (!$plan['create'] && !$plan['update'] && !$plan['delete']) {
+            return;
+        }
+        $this->backups->save($domain, 'plesk', $all);
         foreach ($plan['create'] as $rec) {
             $this->plesk->addRecord($domain, $rec);
         }
         foreach ($plan['update'] as $u) {
-            $this->plesk->addRecord($domain, $u['record']);
             $this->plesk->deleteRecord($u['id']);
+            $this->plesk->addRecord($domain, $u['record']);
         }
         foreach ($plan['delete'] as $rec) {
             $this->plesk->deleteRecord($rec['id']);

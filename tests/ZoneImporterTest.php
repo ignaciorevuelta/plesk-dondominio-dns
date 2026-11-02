@@ -15,7 +15,7 @@ final class FakeDd {
     public int $writes = 0;
     public function __construct(public array $z) {}
     public function listServices(){ return array_keys($this->z); }
-    public function listRecords($s){ if ($this->z[$s]===null) throw new RuntimeException('boom'); return $this->z[$s]; }
+    public function listRecords($s){ if ($this->z[$s]===null) throw new RuntimeException('boom'); if ($this->z[$s] instanceof Throwable) throw $this->z[$s]; return $this->z[$s]; }
     public function create(){ $this->writes++; } public function update(){ $this->writes++; } public function delete(){ $this->writes++; }
 }
 
@@ -35,8 +35,54 @@ final class ZoneImporterTest extends TestCase {
     }
     public function testErrorInOneDomainDoesNotStopOthers(): void {
         $p = new FakePlesk(['mal.es'=>[],'bien.es'=>[]]);
-        $d = new FakeDd(['mal.es'=>null,'bien.es'=>[]]);
+        $d = new FakeDd(['mal.es'=>null,'bien.es'=>[$this->dd('w.bien.es','x')]]);
         $r = (new I($d,$p,new B(sys_get_temp_dir().'/ddi'.uniqid())))->importAll();
+        $this->assertSame(['bien.es'],$r['imported']);
+        $this->assertArrayHasKey('mal.es',$r['errors']);
+    }
+
+    private function tmp(): string { return sys_get_temp_dir().'/ddi'.uniqid(); }
+
+    public function testEmptyDonDominioZoneIsAnErrorAndPleskUntouched(): void {
+        $p = new FakePlesk(['a.es'=>[$this->rec('p1','w.a.es','x')]]);
+        $d = new FakeDd(['a.es'=>[]]);
+        $r = (new I($d,$p,new B($this->tmp())))->importAll();
+        $this->assertSame([],$r['imported']);
+        $this->assertArrayHasKey('a.es',$r['errors']);
+        $this->assertSame([],$p->log);
+    }
+    public function testZoneWithOnlyUnsupportedRecordsIsAnError(): void {
+        $p = new FakePlesk(['a.es'=>[$this->rec('p1','w.a.es','x')]]);
+        $d = new FakeDd(['a.es'=>[['entityID'=>'n','name'=>'a.es','type'=>'NS','ttl'=>'-','priority'=>'-','value'=>'ns1.x']]]);
+        $r = (new I($d,$p,new B($this->tmp())))->importAll();
+        $this->assertArrayHasKey('a.es',$r['errors']);
+        $this->assertSame([],$p->log);
+    }
+    public function testPleskNsIsNeverDeleted(): void {
+        $ns = ['name'=>'a.es','type'=>'NS','priority'=>'-','value'=>'ns1.plesk','id'=>'ns1'];
+        $p = new FakePlesk(['a.es'=>[$ns, $this->rec('p1','w.a.es','x')]]);
+        $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','x')]]);
+        (new I($d,$p,new B($this->tmp())))->importAll();
+        $this->assertSame([],$p->log);
+    }
+    public function testUpdateDeletesBeforeAdding(): void {
+        $p = new FakePlesk(['a.es'=>[$this->rec('p1','w.a.es','old')]]);
+        $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','new')]]);
+        (new I($d,$p,new B($this->tmp())))->importAll();
+        $this->assertSame(['del:p1','add:w.a.es'],$p->log);
+    }
+    public function testNoBackupWhenPlanIsEmpty(): void {
+        $dir = $this->tmp();
+        $p = new FakePlesk(['a.es'=>[$this->rec('p1','w.a.es','x')]]);
+        $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','x')]]);
+        $r = (new I($d,$p,new B($dir)))->importAll();
+        $this->assertSame(['a.es'],$r['imported']);
+        $this->assertSame([],glob($dir.'/a.es/*.json') ?: []);
+    }
+    public function testThrowableIsCaughtPerDomain(): void {
+        $p = new FakePlesk(['mal.es'=>[],'bien.es'=>[]]);
+        $d = new FakeDd(['mal.es'=>new TypeError('x'),'bien.es'=>[$this->dd('w.bien.es','x')]]);
+        $r = (new I($d,$p,new B($this->tmp())))->importAll();
         $this->assertSame(['bien.es'],$r['imported']);
         $this->assertArrayHasKey('mal.es',$r['errors']);
     }
