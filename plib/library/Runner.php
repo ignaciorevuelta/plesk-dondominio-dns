@@ -32,7 +32,7 @@ class Modules_DondominioDns_Runner
     public static function preview(string $domain): array
     {
         $enabled = in_array($domain, Modules_DondominioDns_Config::enabled(), true);
-        return self::engine()->plan($domain, self::desired($domain), $enabled ? Modules_DondominioDns_Config::known($domain) : null);
+        return self::engine()->plan($domain, self::desired($domain), $enabled ? (Modules_DondominioDns_Config::known($domain) ?? []) : null);
     }
 
     // Zona de Plesk como zona deseada (sin ids de Plesk, que no significan nada en Don Dominio).
@@ -61,17 +61,18 @@ class Modules_DondominioDns_Runner
         if (!$zones) {
             return;
         }
-        $ran = self::locked(function () use ($zones) {
-            foreach ($zones as $domain => $desired) {
-                self::attempt($domain, fn() => self::syncWith($domain, $desired, false, false));
-            }
-        });
-        if (!$ran) {
-            // Otra sincronización sigue en curso: se deja anotado y la tarea de reintentos lo aplica.
-            foreach (array_keys($zones) as $domain) {
-                self::markPending($domain);
-            }
+        // Plesk espera al backend al guardar la zona: aquí solo se anota y la API de Don Dominio se llama
+        // en segundo plano, para que una API lenta nunca retrase a Plesk.
+        foreach ($zones as $domain => $desired) {
+            self::markPending($domain, $desired);
         }
+        self::retryInBackground();
+    }
+
+    private static function retryInBackground(): void
+    {
+        $cmd = escapeshellarg(PRODUCT_ROOT . '/bin/extension') . ' --exec ' . escapeshellarg(pm_Context::getModuleId()) . ' retry.php';
+        exec($cmd . ' > /dev/null 2>&1 &');
     }
 
     public static function retry(): void
@@ -81,12 +82,17 @@ class Modules_DondominioDns_Runner
         }
         self::locked(function () {
             $enabled = Modules_DondominioDns_Config::enabled();
-            foreach (self::takePending() as $domain) {
+            $done = [];
+            foreach (self::takePending() as $domain => $desired) {
                 if (in_array($domain, $enabled, true)) {
-                    self::attempt($domain, fn() => self::syncDomain($domain));
+                    self::attempt($domain, fn() => self::syncWith($domain, $desired, false, false));
+                    $done[$domain] = true;
                 }
             }
             foreach (Modules_DondominioDns_Config::failures() as $domain => $f) {
+                if (isset($done[$domain])) {
+                    continue;
+                }
                 if (!empty($f['blocked']) || $f['attempts'] >= self::MAX_ATTEMPTS || $f['next'] > time()) {
                     continue;
                 }
@@ -108,7 +114,8 @@ class Modules_DondominioDns_Runner
 
     private static function syncWith(string $domain, array $desired, bool $force, bool $reviewed): void
     {
-        $known = $reviewed ? null : Modules_DondominioDns_Config::known($domain);
+        // Sin historial (dominio activado con una versión anterior) nada cuenta como propio: no se borra lo ajeno.
+        $known = $reviewed ? null : (Modules_DondominioDns_Config::known($domain) ?? []);
         $plan = self::engine()->sync($domain, $desired, $force, $known);
         Modules_DondominioDns_Config::setKnown($domain, Modules_DondominioDns_SyncEngine::ownedKeys($desired, $domain));
         Modules_DondominioDns_Config::setNotice($domain, $plan);
@@ -130,10 +137,14 @@ class Modules_DondominioDns_Runner
         Modules_DondominioDns_Config::setFailures($failures);
     }
 
-    // Evita que el backend y el reintento escriban a la vez. Devuelve false si no consigue el bloqueo a tiempo.
-    private static function locked(callable $work): bool
+    // Evita que el reintento y las acciones de la pantalla escriban a la vez en Don Dominio y en los ajustes.
+    // Devuelve false si no consigue el bloqueo a tiempo.
+    public static function locked(callable $work): bool
     {
-        $h = fopen(pm_Context::getVarDir() . 'sync.lock', 'c');
+        $h = @fopen(pm_Context::getVarDir() . 'sync.lock', 'c');
+        if ($h === false) {
+            return false;
+        }
         $deadline = microtime(true) + self::LOCK_WAIT_SECONDS;
         while (!flock($h, LOCK_EX | LOCK_NB)) {
             if (microtime(true) >= $deadline) {
@@ -151,24 +162,32 @@ class Modules_DondominioDns_Runner
         return true;
     }
 
-    // Un fichero por dominio: se puede anotar sin el bloqueo y sin pisar a nadie.
-    private static function markPending(string $domain): void
+    // Un fichero por dominio con la última zona recibida de Plesk: se anota sin el bloqueo y gana la más reciente.
+    private static function markPending(string $domain, array $desired): void
     {
         $dir = pm_Context::getVarDir() . 'pending';
         if (!is_dir($dir)) {
             mkdir($dir, 0700, true);
         }
-        touch($dir . '/' . basename($domain));
+        $file = $dir . '/' . basename($domain);
+        file_put_contents("$file.tmp", json_encode($desired));
+        rename("$file.tmp", $file);
     }
 
     private static function takePending(): array
     {
-        $domains = [];
+        $zones = [];
         foreach (glob(pm_Context::getVarDir() . 'pending/*') ?: [] as $file) {
-            $domains[] = basename($file);
+            if (substr($file, -4) === '.tmp') {
+                continue;
+            }
+            $desired = json_decode((string)file_get_contents($file), true);
             unlink($file);
+            if (is_array($desired)) {
+                $zones[basename($file)] = $desired;
+            }
         }
-        return $domains;
+        return $zones;
     }
 
     private static function backups(): Modules_DondominioDns_Backups

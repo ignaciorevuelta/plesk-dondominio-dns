@@ -36,14 +36,17 @@ class Modules_DondominioDns_Backend
         pm_Settings::set('backendRegistered', '1');
     }
 
-    // Desactiva el backend solo si es el de esta extensión. Si no se puede comprobar, se fía de si lo registró ella.
-    public static function unregisterIfOurs(): void
+    // Desactiva el backend solo si es el de esta extensión. Si no se puede comprobar, no toca nada y lo dice.
+    public static function unregisterIfOurs(): ?string
     {
         $current = self::current();
-        $ours = $current === null ? pm_Settings::get('backendRegistered', '') === '1' : self::isOurs($current);
-        if ($ours) {
+        pm_Settings::set('backendRegistered', '');
+        if ($current === null) {
+            return 'The active custom DNS backend could not be read, so it was left as it is. If it was this extension, disable it with: plesk bin server_dns --disable-custom-backend';
+        }
+        if (self::isOurs($current)) {
             pm_ApiCli::call('server_dns', ['--disable-custom-backend']);
         }
-        pm_Settings::set('backendRegistered', '');
+        return null;
     }
 }

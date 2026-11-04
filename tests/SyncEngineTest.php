@@ -77,6 +77,13 @@ final class SyncEngineTest extends TestCase {
         $this->assertSame(['create:w'],$c->log);
         $this->assertSame(['b','w'], array_column($plan['foreign'],'name'));
     }
+    public function testEmptyHistoryKeepsEverythingPleskDoesNotWant(): void {
+        // Dominio activado con una versión anterior: sin historial se pasa [] y no se borra nada ajeno.
+        $c = new FakeClient([$this->dd('1','a','1'),$this->dd('2','b','2')]);
+        $plan = (new S($c,new B($this->dir)))->sync('ej.es',[$this->rec('a','1')],false,[]);
+        $this->assertSame([],$c->log);
+        $this->assertSame(['b'], array_column($plan['foreign'],'name'));
+    }
     public function testWithoutHistoryExtraRecordsAreDeleted(): void {
         $c = new FakeClient([$this->dd('1','a','1'),$this->dd('2','b','2'),$this->dd('3','c','3'),$this->dd('4','d','4')]);
         $plan = (new S($c,new B($this->dir)))->sync('ej.es',[$this->rec('a','1'),$this->rec('b','2'),$this->rec('c','3')],false,null);

@@ -28,12 +28,12 @@ Safeguards:
 
 - The zone's own NS and SOA records are never synchronized: Don Dominio keeps its own. NS delegations of subdomains are synchronized.
 - Records Don Dominio does not support (such as DS) are not synchronized and are listed in the preview and on the Domains page.
-- Records added in Don Dominio outside Plesk are kept and listed, not deleted.
+- Records added in Don Dominio outside Plesk are kept and listed, not deleted. If you later add the same record in Plesk, it becomes managed by Plesk from then on. A record added in Don Dominio with the same name as a CNAME you create in Plesk makes that change fail until you remove one of them.
 - A change that deletes or replaces more than the safety threshold (30% by default) of a zone is held until you confirm it.
 - The zone is backed up before every write (last 20 per domain, in `/usr/local/psa/var/modules/dondominio-dns/backups/`).
 - Deleting a domain or zone in Plesk never deletes anything in Don Dominio.
 - If Don Dominio is unreachable, the change is retried up to 5 times with increasing delays.
-- Saving a zone in Plesk never waits more than 10 seconds for a synchronization in progress; the change is applied by the scheduled task instead.
+- Saving a zone in Plesk never waits for Don Dominio: the change is queued and applied in the background within seconds, or by the scheduled task every 5 minutes if another synchronization is running.
 
 Limitations: TTLs are not replicated, because Plesk does not send per-record TTLs. CAA records are supported but have not been tested against a real zone yet.
 

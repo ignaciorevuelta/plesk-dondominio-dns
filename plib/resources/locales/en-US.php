@@ -70,4 +70,5 @@ $messages = [
     'importKept' => '%%domain%%: records that only exist in Plesk were kept: %%records%%. Delete them in Plesk if they are not needed, or they will be added to Don Dominio when you enable the domain.',
     'report_kept' => 'Kept in Plesk, not in Don Dominio, %%domain%%',
     'report_replaced' => 'Replaced in Plesk with the Don Dominio value, %%domain%%',
+    'busy' => 'A synchronization is in progress. Try again in a moment.',
 ];

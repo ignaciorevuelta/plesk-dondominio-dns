@@ -70,4 +70,5 @@ $messages = [
     'importKept' => '%%domain%%: se han conservado registros que solo existen en Plesk: %%records%%. Bórralos en Plesk si no hacen falta; si no, se añadirán a Don Dominio al activar el dominio.',
     'report_kept' => 'Conservados en Plesk, no están en Don Dominio, %%domain%%',
     'report_replaced' => 'Sustituidos en Plesk por el valor de Don Dominio, %%domain%%',
+    'busy' => 'Hay una sincronización en curso. Vuelve a intentarlo en un momento.',
 ];

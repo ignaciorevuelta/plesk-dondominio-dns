@@ -7,6 +7,8 @@ try {
     $current = Modules_DondominioDns_Backend::current();
     if ($current === '' || Modules_DondominioDns_Backend::isOurs($current)) {
         Modules_DondominioDns_Backend::register();
+    } elseif ($current === null) {
+        echo "The active custom DNS backend could not be read, so this extension was not registered. Register it from the extension settings.\n";
     } else {
         echo "Another custom DNS backend is active, so it was left in place. Choose whether to replace it in the extension settings.\n";
     }

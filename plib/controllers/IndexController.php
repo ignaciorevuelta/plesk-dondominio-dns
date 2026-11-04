@@ -75,7 +75,7 @@ class IndexController extends pm_Controller_Action
             $this->_helper->json(['redirect' => pm_Context::getActionUrl('index', 'index')]);
         }
         $this->view->form = $form;
-        $this->view->current = Modules_DondominioDns_Backend::isOurs($current) ? '' : (string)$current;
+        $this->view->current = Modules_DondominioDns_Backend::isOurs($current) ? '' : ($current ?? $this->lmsg('backendUnknown'));
         $this->view->pageTitle = $this->lmsg('backendUse');
     }
 
@@ -88,7 +88,13 @@ class IndexController extends pm_Controller_Action
             $operation = $form->getValue('operation');
             $redirect = pm_Context::getActionUrl('index', 'domains');
             try {
-                $redirect = $this->runOperation($operation, $domain) ?? $redirect;
+                if ($operation === 'preview') {
+                    $redirect = $this->runOperation($operation, $domain);
+                } elseif (!Modules_DondominioDns_Runner::locked(function () use ($operation, $domain, &$redirect) {
+                    $redirect = $this->runOperation($operation, $domain) ?? $redirect;
+                })) {
+                    $this->_status->addError($this->lmsg('busy'));
+                }
             } catch (Modules_DondominioDns_BlockedException $e) {
                 $this->_status->addError($this->lmsg('blocked', ['error' => $e->getMessage()]));
             } catch (Exception $e) {
@@ -112,9 +118,14 @@ class IndexController extends pm_Controller_Action
             return;
         }
         try {
-            $report = Modules_DondominioDns_Runner::importer()->importAll();
-            Modules_DondominioDns_Config::setReport($report);
-            $this->_status->addInfo($this->lmsg('importAllDone', ['imported' => count($report['imported']), 'errors' => count($report['errors'])]));
+            $ran = Modules_DondominioDns_Runner::locked(function () {
+                $report = Modules_DondominioDns_Runner::importer()->importAll();
+                Modules_DondominioDns_Config::setReport($report);
+                $this->_status->addInfo($this->lmsg('importAllDone', ['imported' => count($report['imported']), 'errors' => count($report['errors'])]));
+            });
+            if (!$ran) {
+                $this->_status->addError($this->lmsg('busy'));
+            }
         } catch (Exception $e) {
             $this->_status->addError($e->getMessage());
         }
