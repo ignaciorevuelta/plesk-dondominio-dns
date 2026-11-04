@@ -21,18 +21,26 @@ class Modules_DondominioDns_Runner
         return new Modules_DondominioDns_ZoneImporter(self::client(), new Modules_DondominioDns_PleskDns(), self::backups());
     }
 
-    // $reviewed: el administrador acaba de revisar la vista previa (activar o confirmar), así que se puede
-    // borrar en Don Dominio lo que no esté en Plesk aunque no lo creara la extensión.
-    public static function syncDomain(string $domain, bool $force = false, bool $reviewed = false): void
+    public static function syncDomain(string $domain, bool $force = false): void
     {
-        self::syncWith($domain, self::desired($domain), $force, $reviewed);
+        self::syncWith($domain, self::desired($domain), $force);
     }
 
-    // Lo que la sincronización haría ahora mismo, con las mismas reglas que syncDomain.
+    // Lo que la sincronización haría ahora mismo: mismas reglas que syncDomain, así lo que se ve es lo que se aplica.
     public static function preview(string $domain): array
     {
-        $enabled = in_array($domain, Modules_DondominioDns_Config::enabled(), true);
-        return self::engine()->plan($domain, self::desired($domain), $enabled ? (Modules_DondominioDns_Config::known($domain) ?? []) : null);
+        return self::engine()->plan($domain, self::desired($domain), self::knownFor($domain));
+    }
+
+    // Dominio aún sin activar: el administrador revisa la vista previa antes de activarlo, así que se puede borrar
+    // en Don Dominio lo que no esté en Plesk (null). Dominio activado: solo se borra lo que dejó la extensión; sin
+    // historial (activado con una versión anterior) no cuenta nada como propio ([]).
+    private static function knownFor(string $domain): ?array
+    {
+        if (!in_array($domain, Modules_DondominioDns_Config::enabled(), true)) {
+            return null;
+        }
+        return Modules_DondominioDns_Config::known($domain) ?? [];
     }
 
     // Zona de Plesk como zona deseada (sin ids de Plesk, que no significan nada en Don Dominio).
@@ -85,7 +93,7 @@ class Modules_DondominioDns_Runner
             $done = [];
             foreach (self::takePending() as $domain => $desired) {
                 if (in_array($domain, $enabled, true)) {
-                    self::attempt($domain, fn() => self::syncWith($domain, $desired, false, false));
+                    self::attempt($domain, fn() => self::syncWith($domain, $desired, false));
                     $done[$domain] = true;
                 }
             }
@@ -112,11 +120,9 @@ class Modules_DondominioDns_Runner
         Modules_DondominioDns_Config::setFailures($failures);
     }
 
-    private static function syncWith(string $domain, array $desired, bool $force, bool $reviewed): void
+    private static function syncWith(string $domain, array $desired, bool $force): void
     {
-        // Sin historial (dominio activado con una versión anterior) nada cuenta como propio: no se borra lo ajeno.
-        $known = $reviewed ? null : (Modules_DondominioDns_Config::known($domain) ?? []);
-        $plan = self::engine()->sync($domain, $desired, $force, $known);
+        $plan = self::engine()->sync($domain, $desired, $force, self::knownFor($domain));
         Modules_DondominioDns_Config::setKnown($domain, Modules_DondominioDns_SyncEngine::ownedKeys($desired, $domain));
         Modules_DondominioDns_Config::setNotice($domain, $plan);
     }
@@ -170,19 +176,28 @@ class Modules_DondominioDns_Runner
             mkdir($dir, 0700, true);
         }
         $file = $dir . '/' . basename($domain);
-        file_put_contents("$file.tmp", json_encode($desired));
-        rename("$file.tmp", $file);
+        // Temporal único por escritor; rename() es atómico, así que el lector nunca ve un fichero a medias.
+        $tmp = $file . '.tmp.' . getmypid() . '.' . bin2hex(random_bytes(4));
+        if (file_put_contents($tmp, json_encode($desired)) === false || !rename($tmp, $file)) {
+            @unlink($tmp);
+            fwrite(STDERR, "$domain: no se pudo dejar el cambio en cola\n");
+        }
     }
 
     private static function takePending(): array
     {
         $zones = [];
         foreach (glob(pm_Context::getVarDir() . 'pending/*') ?: [] as $file) {
-            if (substr($file, -4) === '.tmp') {
+            if (strpos(basename($file), '.tmp.') !== false || strpos(basename($file), '.claim.') !== false) {
                 continue;
             }
-            $desired = json_decode((string)file_get_contents($file), true);
-            unlink($file);
+            // Se reclama con rename() antes de leer: si llega una zona más nueva, queda en su sitio para la próxima vez.
+            $claim = $file . '.claim.' . getmypid();
+            if (!@rename($file, $claim)) {
+                continue;
+            }
+            $desired = json_decode((string)file_get_contents($claim), true);
+            unlink($claim);
             if (is_array($desired)) {
                 $zones[basename($file)] = $desired;
             }

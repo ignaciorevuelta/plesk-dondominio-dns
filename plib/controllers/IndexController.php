@@ -196,7 +196,7 @@ class IndexController extends pm_Controller_Action
                 }
                 return null;
             case 'enable':
-                Modules_DondominioDns_Runner::syncDomain($domain, false, true);
+                Modules_DondominioDns_Runner::syncDomain($domain);
                 Modules_DondominioDns_Config::setEnabled(array_merge(Modules_DondominioDns_Config::enabled(), [$domain]));
                 $this->_status->addInfo($this->lmsg('enabled', ['domain' => $domain]));
                 return null;
@@ -209,7 +209,7 @@ class IndexController extends pm_Controller_Action
                 return null;
             case 'force':
                 // También sirve para la primera sincronización retenida al activar: aplica y deja el dominio activado.
-                Modules_DondominioDns_Runner::syncDomain($domain, true, true);
+                Modules_DondominioDns_Runner::syncDomain($domain, true);
                 Modules_DondominioDns_Config::setEnabled(array_merge(Modules_DondominioDns_Config::enabled(), [$domain]));
                 Modules_DondominioDns_Runner::forget($domain);
                 $this->_status->addInfo($this->lmsg('forced', ['domain' => $domain]));

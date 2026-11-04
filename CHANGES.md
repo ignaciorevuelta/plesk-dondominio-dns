@@ -4,6 +4,7 @@
 * [*] Saving a DNS zone in Plesk never waits for the Don Dominio API: the change is queued and applied in the background.
 * [*] NS delegations of subdomains are now synchronized. Records Don Dominio does not support (such as DS) are listed in the preview and on the Domains page instead of being skipped silently.
 * [*] Records added in Don Dominio outside Plesk are kept and listed, instead of being deleted by the next synchronization.
+* [*] Upgrading from 0.1.0: synchronization stays paused until the administrator accepts the license agreement in the extension.
 * [*] The import from Don Dominio no longer deletes records that only exist in Plesk: it keeps and lists them, and lists the values it replaces.
 
 # 0.1.0
