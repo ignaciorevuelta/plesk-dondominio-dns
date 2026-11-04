@@ -198,12 +198,9 @@ class Modules_DondominioDns_Runner
         $claimed = self::queueDir('pending-claimed');
         // Un reclamado que sigue aquí es de una ejecución interrumpida: vuelve a la cola salvo que ya haya uno más nuevo.
         foreach (glob($claimed . '/*') ?: [] as $old) {
-            $target = $pending . '/' . basename($old);
-            if (file_exists($target)) {
-                unlink($old);
-            } else {
-                rename($old, $target);
-            }
+            // link() falla si ya hay uno más nuevo: así nunca se sobrescribe. En los dos casos el reclamado sobra.
+            @link($old, $pending . '/' . basename($old));
+            unlink($old);
         }
         $zones = [];
         foreach (glob($pending . '/*') ?: [] as $file) {
