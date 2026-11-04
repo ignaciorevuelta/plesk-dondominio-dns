@@ -96,6 +96,7 @@ class Modules_DondominioDns_Runner
                     self::attempt($domain, fn() => self::syncWith($domain, $desired, false));
                     $done[$domain] = true;
                 }
+                self::releasePending($domain);
             }
             foreach (Modules_DondominioDns_Config::failures() as $domain => $f) {
                 if (isset($done[$domain])) {
@@ -168,41 +169,61 @@ class Modules_DondominioDns_Runner
         return true;
     }
 
-    // Un fichero por dominio con la última zona recibida de Plesk: se anota sin el bloqueo y gana la más reciente.
-    private static function markPending(string $domain, array $desired): void
+    // Cola de cambios: pending/<dominio> guarda la última zona recibida de Plesk. Los temporales y los
+    // reclamados van en directorios aparte, para no confundirlos nunca con un nombre de dominio.
+    private static function queueDir(string $name): string
     {
-        $dir = pm_Context::getVarDir() . 'pending';
+        $dir = pm_Context::getVarDir() . $name;
         if (!is_dir($dir)) {
             mkdir($dir, 0700, true);
         }
-        $file = $dir . '/' . basename($domain);
+        return $dir;
+    }
+
+    private static function markPending(string $domain, array $desired): void
+    {
         // Temporal único por escritor; rename() es atómico, así que el lector nunca ve un fichero a medias.
-        $tmp = $file . '.tmp.' . getmypid() . '.' . bin2hex(random_bytes(4));
+        $tmp = self::queueDir('pending-tmp') . '/' . getmypid() . '-' . bin2hex(random_bytes(4));
+        $file = self::queueDir('pending') . '/' . basename($domain);
         if (file_put_contents($tmp, json_encode($desired)) === false || !rename($tmp, $file)) {
             @unlink($tmp);
             fwrite(STDERR, "$domain: no se pudo dejar el cambio en cola\n");
         }
     }
 
+    // Solo se llama dentro de locked(), así que hay un único lector a la vez.
     private static function takePending(): array
     {
-        $zones = [];
-        foreach (glob(pm_Context::getVarDir() . 'pending/*') ?: [] as $file) {
-            if (strpos(basename($file), '.tmp.') !== false || strpos(basename($file), '.claim.') !== false) {
-                continue;
+        $pending = self::queueDir('pending');
+        $claimed = self::queueDir('pending-claimed');
+        // Un reclamado que sigue aquí es de una ejecución interrumpida: vuelve a la cola salvo que ya haya uno más nuevo.
+        foreach (glob($claimed . '/*') ?: [] as $old) {
+            $target = $pending . '/' . basename($old);
+            if (file_exists($target)) {
+                unlink($old);
+            } else {
+                rename($old, $target);
             }
-            // Se reclama con rename() antes de leer: si llega una zona más nueva, queda en su sitio para la próxima vez.
-            $claim = $file . '.claim.' . getmypid();
+        }
+        $zones = [];
+        foreach (glob($pending . '/*') ?: [] as $file) {
+            // Se reclama con rename() antes de leer: si llega una zona más nueva, queda en la cola para la próxima vez.
+            $claim = $claimed . '/' . basename($file);
             if (!@rename($file, $claim)) {
                 continue;
             }
             $desired = json_decode((string)file_get_contents($claim), true);
-            unlink($claim);
             if (is_array($desired)) {
                 $zones[basename($file)] = $desired;
             }
         }
         return $zones;
+    }
+
+    // Se borra el reclamado solo cuando el cambio ya se ha intentado; un fallo queda en la cola de reintentos.
+    private static function releasePending(string $domain): void
+    {
+        @unlink(pm_Context::getVarDir() . 'pending-claimed/' . basename($domain));
     }
 
     private static function backups(): Modules_DondominioDns_Backups
