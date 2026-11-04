@@ -4,7 +4,7 @@ Don Dominio DNS for Plesk ("the Software") is free, open-source software distrib
 
 By accepting this agreement in the extension's settings, the server administrator acknowledges that:
 
-1. **What the Software does.** When a domain is enabled, the Software sends the DNS records of that domain, and the Don Dominio API credentials entered by the administrator, to the Don Dominio API (`https://simple-api.dondominio.net/`) to create, change and delete records there. The initial import replaces the DNS zones in Plesk with the zones published in Don Dominio, after saving a backup.
+1. **What the Software does.** When a domain is enabled, the Software sends the DNS records of that domain, and the Don Dominio API credentials entered by the administrator, to the Don Dominio API (`https://simple-api.dondominio.net/`) to create, change and delete records there. The import copies the records published in Don Dominio into the Plesk zones, after saving a backup; records that only exist in Plesk are kept and listed.
 2. **Responsibility.** The administrator is responsible for reviewing the changes before enabling a domain, for the accuracy of the DNS records, and for complying with the Don Dominio terms of service.
 3. **No affiliation.** The Software is not affiliated with, endorsed by or supported by Don Dominio or Plesk.
 4. **Privacy.** The Software processes only the data described in the privacy policy at https://github.com/ignaciorevuelta/plesk-dondominio-dns/blob/main/PRIVACY.md. Its author receives no data.
