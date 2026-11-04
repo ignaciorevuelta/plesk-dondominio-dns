@@ -11,7 +11,7 @@ Plesk extension that replicates the DNS zones you edit in Plesk to [Don Dominio]
 
 ## Install
 
-Download the ZIP from the releases page and install it from **Extensions > My Extensions > Upload Extension**, or from the command line:
+Download `dondominio-dns-<version>.zip` from the [releases page](https://github.com/ignaciorevuelta/plesk-dondominio-dns/releases) and install it from **Extensions > My Extensions > Upload Extension**, or from the command line:
 
 ```bash
 plesk bin extension --install dondominio-dns.zip
