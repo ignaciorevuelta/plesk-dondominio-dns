@@ -204,6 +204,7 @@ class IndexController extends pm_Controller_Action
                 Modules_DondominioDns_Config::setEnabled(array_diff(Modules_DondominioDns_Config::enabled(), [$domain]));
                 Modules_DondominioDns_Runner::forget($domain);
                 Modules_DondominioDns_Config::setKnown($domain, null);
+                Modules_DondominioDns_Config::setNotice($domain, []);
                 $this->_status->addInfo($this->lmsg('disabled', ['domain' => $domain]));
                 return null;
             case 'force':
