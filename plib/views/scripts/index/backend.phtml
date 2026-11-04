@@ -1,0 +1,5 @@
+<?php if ($this->current !== ''): ?>
+<p><strong><?php echo $this->escape(pm_Locale::lmsg('backendReplaceWarning', ['current' => $this->current])); ?></strong></p>
+<?php endif; ?>
+<p><?php echo $this->escape(pm_Locale::lmsg('backendUseHint')); ?></p>
+<?php echo $this->form; ?>

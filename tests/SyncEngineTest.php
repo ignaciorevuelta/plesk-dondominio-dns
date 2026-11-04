@@ -69,6 +69,25 @@ final class SyncEngineTest extends TestCase {
         $this->assertSame($plan, (new S($c,new B($this->dir)))->sync('ej.es',$desired));
         $this->assertSame(['z'], array_column($plan['create'],'name'));
     }
+    public function testForeignRecordsAreKeptNotDeletedNorOverwritten(): void {
+        // 'b' y 'w' (valor 9) los añadió alguien en Don Dominio; la extensión solo conoce 'a'.
+        $c = new FakeClient([$this->dd('1','a','1'),$this->dd('2','b','2'),$this->dd('3','w','9')]);
+        $known = [Modules_DondominioDns_Record::key(['name'=>'a','type'=>'A','priority'=>'-','value'=>'1'])];
+        $plan = (new S($c,new B($this->dir)))->sync('ej.es',[$this->rec('a','1'),$this->rec('w','5')],false,$known);
+        $this->assertSame(['create:w'],$c->log);
+        $this->assertSame(['b','w'], array_column($plan['foreign'],'name'));
+    }
+    public function testWithoutHistoryExtraRecordsAreDeleted(): void {
+        $c = new FakeClient([$this->dd('1','a','1'),$this->dd('2','b','2'),$this->dd('3','c','3'),$this->dd('4','d','4')]);
+        $plan = (new S($c,new B($this->dir)))->sync('ej.es',[$this->rec('a','1'),$this->rec('b','2'),$this->rec('c','3')],false,null);
+        $this->assertSame(['delete:4'],$c->log);
+        $this->assertSame([],$plan['foreign']);
+    }
+    public function testSkippedTypesAreReported(): void {
+        $c = new FakeClient([$this->dd('1','a','1')]);
+        $plan = (new S($c,new B($this->dir)))->plan('ej.es',[$this->rec('a','1'),['name'=>'sub.ej.es','type'=>'DS','priority'=>'-','value'=>'1 8 2 AB','id'=>null]]);
+        $this->assertSame(['DS'], array_column($plan['skipped'],'type'));
+    }
     public function testNsGlueAddressIsNotPushed(): void {
         $c = new FakeClient([$this->dd('1','a','1')]);
         (new S($c,new B($this->dir)))->sync('ej.es',[

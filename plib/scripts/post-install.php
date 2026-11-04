@@ -2,10 +2,14 @@
 pm_Loader::registerAutoload();
 pm_Context::init('dondominio-dns');
 
-// Ningún dominio se sincroniza hasta activarlo en los ajustes, así que registrar el backend es inocuo.
 try {
-    $cmd = substr(PHP_OS, 0, 3) === 'WIN' ? '"' . PRODUCT_ROOT . '\bin\extension.exe"' : '"' . PRODUCT_ROOT . '/bin/extension"';
-    pm_ApiCli::call('server_dns', ['--enable-custom-backend', $cmd . ' --exec ' . pm_Context::getModuleId() . ' backend.php']);
+    // Solo se registra como backend DNS si no hay otro. Si lo hay, el administrador decide en los ajustes.
+    $current = Modules_DondominioDns_Backend::current();
+    if ($current === '' || Modules_DondominioDns_Backend::isOurs($current)) {
+        Modules_DondominioDns_Backend::register();
+    } else {
+        echo "Another custom DNS backend is active, so it was left in place. Choose whether to replace it in the extension settings.\n";
+    }
 
     $scheduler = pm_Scheduler::getInstance();
     foreach ($scheduler->listTasks() as $existing) {

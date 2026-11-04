@@ -22,7 +22,7 @@ class Modules_DondominioDns_PleskDns
             }
             $d = $res->data;
             $rr = (object)['host' => (string)$d->host, 'type' => (string)$d->type, 'opt' => (string)$d->opt, 'value' => (string)$d->value];
-            $rec = Modules_DondominioDns_Record::fromPlesk($rr) ?? ['name' => rtrim(strtolower($rr->host), '.'), 'type' => strtoupper($rr->type), 'priority' => '-', 'value' => $rr->value];
+            $rec = Modules_DondominioDns_Record::fromPlesk($rr) ?? Modules_DondominioDns_Record::rawPlesk($rr);
             $rec['id'] = (string)$res->id;
             $out[] = $rec;
         }

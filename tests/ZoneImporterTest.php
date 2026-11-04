@@ -30,7 +30,8 @@ final class ZoneImporterTest extends TestCase {
         $this->assertSame(['a.es'],$r['imported']);
         $this->assertSame(['solo-dd.es'],$r['servicesWithoutDomain']);
         $this->assertSame(['solo-plesk.es'],$r['domainsWithoutService']);
-        $this->assertSame(['add:auto.a.es','del:p1'],$p->log);
+        $this->assertSame(['add:auto.a.es'],$p->log);
+        $this->assertSame(['a.es'=>['old.a.es CNAME x']],$r['kept']);
         $this->assertSame(0,$d->writes);
     }
     public function testNsGlueAddressInPleskIsKept(): void {
@@ -41,7 +42,7 @@ final class ZoneImporterTest extends TestCase {
         ]]);
         $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','a.es')]]);
         (new I($d,$p,new B(sys_get_temp_dir().'/ddi'.uniqid())))->importOne('a.es');
-        $this->assertSame(['add:w.a.es','del:o1'],$p->log);
+        $this->assertSame(['add:w.a.es'],$p->log);
     }
     public function testErrorInOneDomainDoesNotStopOthers(): void {
         $p = new FakePlesk(['mal.es'=>[],'bien.es'=>[]]);
@@ -75,11 +76,12 @@ final class ZoneImporterTest extends TestCase {
         (new I($d,$p,new B($this->tmp())))->importAll();
         $this->assertSame([],$p->log);
     }
-    public function testUpdateDeletesBeforeAdding(): void {
+    public function testUpdateDeletesBeforeAddingAndIsReported(): void {
         $p = new FakePlesk(['a.es'=>[$this->rec('p1','w.a.es','old')]]);
         $d = new FakeDd(['a.es'=>[$this->dd('w.a.es','new')]]);
-        (new I($d,$p,new B($this->tmp())))->importAll();
+        $r = (new I($d,$p,new B($this->tmp())))->importAll();
         $this->assertSame(['del:p1','add:w.a.es'],$p->log);
+        $this->assertSame(['a.es'=>['w.a.es CNAME old → new']],$r['replaced']);
     }
     public function testNoBackupWhenPlanIsEmpty(): void {
         $dir = $this->tmp();

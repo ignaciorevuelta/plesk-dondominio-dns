@@ -5,7 +5,7 @@
   <description>Replicates the DNS zones you edit in Plesk to Don Dominio, with an initial import of the existing Don Dominio zones.</description>
   <description xml:lang="es-ES">Replica en Don Dominio las zonas DNS que editas en Plesk, con una importación inicial de las zonas que ya existen en Don Dominio.</description>
   <category>dns</category>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <release>1</release>
   <vendor>Ignacio Revuelta</vendor>
   <url>https://github.com/ignaciorevuelta/plesk-dondominio-dns</url>

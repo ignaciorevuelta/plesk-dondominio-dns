@@ -8,6 +8,12 @@
 <?php foreach (['imported', 'servicesWithoutDomain', 'domainsWithoutService'] as $key): ?>
   <li><?php echo $this->escape(pm_Locale::lmsg('report_' . $key)); ?>: <?php echo $this->escape(implode(', ', $this->report[$key] ?? []) ?: '—'); ?></li>
 <?php endforeach; ?>
+<?php foreach ($this->report['kept'] ?? [] as $domain => $records): ?>
+  <li><?php echo $this->escape(pm_Locale::lmsg('report_kept', ['domain' => $domain])); ?>: <?php echo $this->escape(implode('; ', $records)); ?></li>
+<?php endforeach; ?>
+<?php foreach ($this->report['replaced'] ?? [] as $domain => $records): ?>
+  <li><?php echo $this->escape(pm_Locale::lmsg('report_replaced', ['domain' => $domain])); ?>: <?php echo $this->escape(implode('; ', $records)); ?></li>
+<?php endforeach; ?>
 <?php foreach ($this->report['errors'] ?? [] as $domain => $error): ?>
   <li><?php echo $this->escape(pm_Locale::lmsg('report_error', ['domain' => $domain])); ?>: <?php echo $this->escape($error); ?></li>
 <?php endforeach; ?>

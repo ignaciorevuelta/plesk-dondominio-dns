@@ -1,17 +1,20 @@
-<?php // plib/library/SyncEngine.php
+<?php
 class Modules_DondominioDns_SyncEngine
 {
     public function __construct(private $client, private Modules_DondominioDns_Backups $backups, private int $maxDeletePercent = 30) {}
 
     // Cambios que sync() aplicaría, sin escribir nada. La vista previa usa esto.
-    public function plan(string $domain, array $desired): array
+    public function plan(string $domain, array $desired, ?array $known = null): array
     {
-        return $this->compute($domain, $desired)[0];
+        return $this->compute($domain, $desired, $known)[0];
     }
 
-    public function sync(string $domain, array $desired, bool $force = false): array
+    // $known: claves de los registros que esta extensión dejó en Don Dominio en la última sincronización.
+    // Lo que no esté ahí se añadió fuera de Plesk: no se borra, se devuelve en 'foreign' para avisar.
+    // null = sin historial (al activar, tras revisar la vista previa): se puede borrar lo que sobre.
+    public function sync(string $domain, array $desired, bool $force = false, ?array $known = null): array
     {
-        [$plan, $current, $raw] = $this->compute($domain, $desired);
+        [$plan, $current, $raw] = $this->compute($domain, $desired, $known);
         $empty = !$plan['create'] && !$plan['update'] && !$plan['delete'];
         if ($empty) {
             return $plan;
@@ -40,11 +43,37 @@ class Modules_DondominioDns_SyncEngine
         return $plan;
     }
 
-    private function compute(string $domain, array $desired): array
+    // Claves que quedan en Don Dominio a cargo de la extensión tras aplicar un plan: lo deseado.
+    public static function ownedKeys(array $desired, string $domain): array
+    {
+        return array_map(['Modules_DondominioDns_Record', 'key'], Modules_DondominioDns_Record::syncable($desired, $domain));
+    }
+
+    private function compute(string $domain, array $desired, ?array $known): array
     {
         $raw = $this->client->listRecords($domain);
-        $current = array_values(array_filter(array_map(['Modules_DondominioDns_Record', 'fromDonDominio'], $raw)));
-        $desired = array_values(array_filter(Modules_DondominioDns_Record::withoutNsGlue($desired), fn($r) => Modules_DondominioDns_Record::isSupported($r['type'])));
-        return [Modules_DondominioDns_ZoneDiff::plan($desired, $current), $current, $raw];
+        $current = Modules_DondominioDns_Record::syncable(array_values(array_filter(array_map(['Modules_DondominioDns_Record', 'fromDonDominio'], $raw))), $domain);
+        $wanted = Modules_DondominioDns_Record::syncable($desired, $domain);
+        $foreign = [];
+        if ($known !== null) {
+            // Los ajenos quedan fuera de la comparación: así no se borran ni se emparejan como «sustituir».
+            // Si coinciden con algo de Plesk se tratan como propios, para no duplicarlos.
+            $known = array_flip($known);
+            $wantedKeys = array_flip(array_map(['Modules_DondominioDns_Record', 'key'], $wanted));
+            $own = [];
+            foreach ($current as $rec) {
+                $key = Modules_DondominioDns_Record::key($rec);
+                if (isset($known[$key]) || isset($wantedKeys[$key])) {
+                    $own[] = $rec;
+                } else {
+                    $foreign[] = $rec;
+                }
+            }
+            $current = $own;
+        }
+        $plan = Modules_DondominioDns_ZoneDiff::plan($wanted, $current);
+        $plan['foreign'] = $foreign;
+        $plan['skipped'] = Modules_DondominioDns_Record::unsyncable($desired, $domain);
+        return [$plan, $current, $raw];
     }
 }

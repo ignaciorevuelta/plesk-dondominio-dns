@@ -53,6 +53,30 @@ class IndexController extends pm_Controller_Action
             $this->_helper->json(['redirect' => pm_Context::getActionUrl('index', 'domains')]);
         }
         $this->view->form = $form;
+        $current = Modules_DondominioDns_Backend::current();
+        $this->view->backendStatus = Modules_DondominioDns_Backend::isOurs($current) ? 'backendOurs'
+            : ($current === '' ? 'backendNone' : ($current === null ? 'backendUnknown' : 'backendOther'));
+        $this->view->backendCurrent = (string)$current;
+    }
+
+    // Registrar la extensión como backend DNS cuando no lo es: decisión expresa, con aviso si sustituye a otro.
+    public function backendAction()
+    {
+        $current = Modules_DondominioDns_Backend::current();
+        $form = new pm_Form_Simple();
+        $form->addControlButtons(['cancelLink' => pm_Context::getActionUrl('index', 'index'), 'sendTitle' => $this->lmsg('backendUse')]);
+        if ($this->getRequest()->isPost() && $form->isValid($this->getRequest()->getPost())) {
+            try {
+                Modules_DondominioDns_Backend::register();
+                $this->_status->addInfo($this->lmsg('backendRegistered'));
+            } catch (Exception $e) {
+                $this->_status->addError($e->getMessage());
+            }
+            $this->_helper->json(['redirect' => pm_Context::getActionUrl('index', 'index')]);
+        }
+        $this->view->form = $form;
+        $this->view->current = Modules_DondominioDns_Backend::isOurs($current) ? '' : (string)$current;
+        $this->view->pageTitle = $this->lmsg('backendUse');
     }
 
     public function domainsAction()
@@ -126,9 +150,9 @@ class IndexController extends pm_Controller_Action
 
     private function previewList(string $domain): pm_View_List_Simple
     {
-        $plan = Modules_DondominioDns_Runner::engine()->plan($domain, Modules_DondominioDns_Runner::desired($domain));
+        $plan = Modules_DondominioDns_Runner::preview($domain);
         $rows = [];
-        foreach (['create' => $plan['create'], 'delete' => $plan['delete']] as $op => $recs) {
+        foreach (['create' => $plan['create'], 'delete' => $plan['delete'], 'foreign' => $plan['foreign'], 'skipped' => $plan['skipped']] as $op => $recs) {
             foreach ($recs as $r) {
                 $rows[] = $this->row($op, $r);
             }
@@ -154,22 +178,26 @@ class IndexController extends pm_Controller_Action
             case 'preview':
                 return pm_Context::getActionUrl('index', 'preview') . '?domain=' . rawurlencode($domain);
             case 'import':
-                Modules_DondominioDns_Runner::importer()->importOne($domain);
+                $result = Modules_DondominioDns_Runner::importer()->importOne($domain);
                 $this->_status->addInfo($this->lmsg('imported', ['domain' => $domain]));
+                if ($result['kept']) {
+                    $this->_status->addWarning($this->lmsg('importKept', ['domain' => $domain, 'records' => implode('; ', $result['kept'])]));
+                }
                 return null;
             case 'enable':
-                Modules_DondominioDns_Runner::syncDomain($domain);
+                Modules_DondominioDns_Runner::syncDomain($domain, false, true);
                 Modules_DondominioDns_Config::setEnabled(array_merge(Modules_DondominioDns_Config::enabled(), [$domain]));
                 $this->_status->addInfo($this->lmsg('enabled', ['domain' => $domain]));
                 return null;
             case 'disable':
                 Modules_DondominioDns_Config::setEnabled(array_diff(Modules_DondominioDns_Config::enabled(), [$domain]));
                 Modules_DondominioDns_Runner::forget($domain);
+                Modules_DondominioDns_Config::setKnown($domain, null);
                 $this->_status->addInfo($this->lmsg('disabled', ['domain' => $domain]));
                 return null;
             case 'force':
                 // También sirve para la primera sincronización retenida al activar: aplica y deja el dominio activado.
-                Modules_DondominioDns_Runner::syncDomain($domain, true);
+                Modules_DondominioDns_Runner::syncDomain($domain, true, true);
                 Modules_DondominioDns_Config::setEnabled(array_merge(Modules_DondominioDns_Config::enabled(), [$domain]));
                 Modules_DondominioDns_Runner::forget($domain);
                 $this->_status->addInfo($this->lmsg('forced', ['domain' => $domain]));
@@ -182,11 +210,19 @@ class IndexController extends pm_Controller_Action
     {
         $enabled = Modules_DondominioDns_Config::enabled();
         $failures = Modules_DondominioDns_Config::failures();
+        $notices = Modules_DondominioDns_Config::notices();
         $rows = [];
         foreach ($domains as $d) {
             $f = $failures[$d] ?? null;
             $status = !in_array($d, $enabled, true) ? 'statusOff' : ($f === null ? 'statusOn' : (!empty($f['blocked']) ? 'statusBlocked' : 'statusFailing'));
-            $rows[] = ['domain' => $d, 'status' => $this->lmsg($status), 'error' => $f['error'] ?? ''];
+            $warnings = [];
+            if (!empty($notices[$d]['foreign'])) {
+                $warnings[] = $this->lmsg('noticeForeign', ['records' => implode('; ', $notices[$d]['foreign'])]);
+            }
+            if (!empty($notices[$d]['skipped'])) {
+                $warnings[] = $this->lmsg('noticeSkipped', ['records' => implode('; ', $notices[$d]['skipped'])]);
+            }
+            $rows[] = ['domain' => $d, 'status' => $this->lmsg($status), 'error' => implode(' ', array_filter([$f['error'] ?? '', ...$warnings]))];
         }
         $list = new pm_View_List_Simple($this->view, $this->_request);
         $list->setData($rows);

@@ -1,3 +1,8 @@
 <?php echo $this->renderTabs($this->tabs); ?>
 <p><?php echo $this->escape(pm_Locale::lmsg('settingsIntro')); ?></p>
 <?php echo $this->form; ?>
+<h3><?php echo $this->escape(pm_Locale::lmsg('backendTitle')); ?></h3>
+<p><?php echo $this->escape(pm_Locale::lmsg($this->backendStatus, ['current' => $this->backendCurrent])); ?></p>
+<?php if ($this->backendStatus !== 'backendOurs'): ?>
+<p><a class="btn" href="<?php echo $this->escape(pm_Context::getActionUrl('index', 'backend')); ?>"><?php echo $this->escape(pm_Locale::lmsg('backendUse')); ?></a></p>
+<?php endif; ?>

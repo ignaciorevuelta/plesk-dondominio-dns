@@ -45,12 +45,30 @@ final class RecordTest extends TestCase {
         $this->assertSame(['aossa.es','uttes.es','solo.sub.ej.es'],
             R::zoneApexes(['aossa.es','sentya.aossa.es','uttes.es','a.b.uttes.es','solo.sub.ej.es']));
     }
+    public function testSyncableKeepsDelegationsDropsApexNsAndGlue(): void {
+        $recs = [
+            ['name'=>'ej.es','type'=>'NS','priority'=>'-','value'=>'ns1.ej.es','id'=>null],
+            ['name'=>'ns1.ej.es','type'=>'A','priority'=>'-','value'=>'192.0.2.1','id'=>null],
+            ['name'=>'sub.ej.es','type'=>'NS','priority'=>'-','value'=>'ns.other.net','id'=>null],
+            ['name'=>'www.ej.es','type'=>'A','priority'=>'-','value'=>'192.0.2.2','id'=>null],
+            ['name'=>'sub.ej.es','type'=>'DS','priority'=>'-','value'=>'1 8 2 ABC','id'=>null],
+            ['name'=>'ej.es','type'=>'SOA','priority'=>'-','value'=>'x','id'=>null],
+        ];
+        $this->assertSame(['sub.ej.es NS','www.ej.es A'], array_map(fn($r)=>$r['name'].' '.$r['type'], R::syncable($recs, 'ej.es')));
+        $this->assertSame(['sub.ej.es DS'], array_map(fn($r)=>$r['name'].' '.$r['type'], R::unsyncable($recs, 'ej.es')));
+    }
+    public function testToPleskNsDelegation(): void {
+        $rec = R::fromDonDominio(['entityID'=>'N','name'=>'sub.ej.es','type'=>'NS','ttl'=>'-','priority'=>'-','value'=>'ns.other.net']);
+        $this->assertSame(['host'=>'sub','type'=>'NS','opt'=>'','value'=>'ns.other.net.'], R::toPlesk($rec, 'ej.es'));
+    }
     public function testTxtKeepsCase(): void {
         $p = R::fromPlesk((object)['host'=>'ej.es.','type'=>'TXT','opt'=>'','value'=>'v=spf1 Include:X -all']);
         $this->assertSame('v=spf1 Include:X -all', $p['value']);
     }
-    public function testNsSoaAndUnknownAreSkipped(): void {
-        $this->assertNull(R::fromPlesk((object)['host'=>'ej.es.','type'=>'NS','opt'=>'','value'=>'ns1.x.']));
+    public function testNsIsNormalizedSoaAndUnknownAreSkipped(): void {
+        $p = R::fromPlesk((object)['host'=>'Sub.ej.es.','type'=>'NS','opt'=>'','value'=>'NS1.Other.net.']);
+        $d = R::fromDonDominio(['entityID'=>'N','name'=>'sub.ej.es','type'=>'NS','ttl'=>'-','priority'=>'-','value'=>'ns1.other.net']);
+        $this->assertSame(R::key($p), R::key($d));
         $this->assertNull(R::fromDonDominio(['entityID'=>'Z','name'=>'ej.es','type'=>'SOA','ttl'=>'-','priority'=>'-','value'=>'x']));
         $this->assertNull(R::fromPlesk((object)['host'=>'ej.es.','type'=>'PTR','opt'=>'','value'=>'x.']));
     }
